@@ -1,0 +1,20 @@
+{
+  "name": "TradeFlow — Import & Export Tracker",
+  "short_name": "TradeFlow",
+  "description": "Track your imports and exports, manage notes, set reminders, and plan with a calendar — fully offline.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0f1a",
+  "theme_color": "#6c63ff",
+  "icons": [
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "screenshots": []
+}

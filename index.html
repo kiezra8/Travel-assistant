@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="TradeFlow — Track imports & exports by country, manage notes, set alarms, and plan with a calendar. Fully offline PWA.">
+  <meta name="theme-color" content="#6c63ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TradeFlow">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-512.svg">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon-512.svg">
+  <title>TradeFlow — Import & Export Tracker</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     TOP NAV
+══════════════════════════════════════════ -->
+<nav id="top-nav" role="navigation" aria-label="Main Navigation">
+  <div class="nav-brand">
+    <div class="logo-icon" aria-hidden="true">🌐</div>
+    TradeFlow
+  </div>
+  <div class="nav-actions">
+    <button class="nav-icon-btn" id="notif-btn" title="Notifications" aria-label="Notifications">🔔</button>
+    <button class="nav-icon-btn" id="settings-btn" title="Settings" aria-label="Settings">⚙️</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════ -->
+<main id="app" role="main">
+
+  <!-- ─── DASHBOARD ──────────────────────── -->
+  <section id="view-dashboard" class="view" aria-label="Dashboard">
+
+    <!-- Install Banner -->
+    <div id="install-banner" role="banner">
+      <p>📲 Install TradeFlow for full offline access</p>
+      <div class="flex gap-8">
+        <button id="install-btn" class="btn btn-primary btn-sm">Install</button>
+        <button id="install-dismiss" class="btn btn-ghost btn-sm">✕</button>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="dash-hero" aria-label="Balance summary">
+      <div class="dash-hero-label">Net Trade Balance</div>
+      <div class="dash-hero-value" id="dash-hero-value">USD 0.00</div>
+      <div class="dash-hero-sub" id="dash-hero-sub">No data yet</div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-card-icon">📦</div>
+        <div class="stat-card-value" id="dash-total-trades">0</div>
+        <div class="stat-card-label">Total Trades</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">📥</div>
+        <div class="stat-card-value" id="dash-total-imports">0</div>
+        <div class="stat-card-label">Imports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">📤</div>
+        <div class="stat-card-value" id="dash-total-exports">0</div>
+        <div class="stat-card-label">Exports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon" style="font-size:.9rem;color:var(--text-muted)">Spent</div>
+        <div class="stat-card-value" style="font-size:1rem" id="dash-import-total">0.00</div>
+        <div class="stat-card-label">Total Import Cost</div>
+      </div>
+    </div>
+
+    <!-- Top Countries -->
+    <div class="card mb-16">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🌍 Top Countries</div>
+          <div class="section-sub">By trade volume</div>
+        </div>
+      </div>
+      <div id="dash-top-countries">
+        <div class="empty-state" style="padding:20px">
+          <div class="text-muted text-sm">No trades logged yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section-header">
+      <div>
+        <div class="section-title">⚡ Recent Activity</div>
+        <div class="section-sub">Latest 5 trades</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="App.navigate('trades')">View all →</button>
+    </div>
+    <div class="activity-list" id="dash-activity-list"></div>
+
+  </section>
+
+  <!-- ─── TRADES ─────────────────────────── -->
+  <section id="view-trades" class="view" aria-label="Trade Tracker">
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">📦 Trade Tracker</h1>
+        <div class="section-sub">Manage imports &amp; exports</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="trade-search" type="search" placeholder="Search by product or country…" aria-label="Search trades">
+    </div>
+
+    <!-- Filter chips -->
+    <div class="trade-filters" role="group" aria-label="Filter by type">
+      <button class="filter-chip active" data-trade-filter="all">All</button>
+      <button class="filter-chip" data-trade-filter="import">📥 Imports</button>
+      <button class="filter-chip" data-trade-filter="export">📤 Exports</button>
+    </div>
+
+    <!-- List -->
+    <div class="trade-list" id="trade-list" role="list" aria-live="polite"></div>
+
+    <!-- FAB -->
+    <button class="fab" id="trade-fab" title="Add Trade" aria-label="Add new trade">+</button>
+  </section>
+
+  <!-- ─── REMINDERS ──────────────────────── -->
+  <section id="view-reminders" class="view" aria-label="Reminders &amp; Alarms">
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">⏰ Reminders &amp; Alarms</h1>
+        <div class="section-sub">Never miss a deadline</div>
+      </div>
+    </div>
+    <div class="reminder-list" id="reminder-list" role="list" aria-live="polite"></div>
+    <button class="fab" id="reminder-fab" title="Add Reminder" aria-label="Set new reminder">+</button>
+  </section>
+
+  <!-- ─── NOTEBOOK ───────────────────────── -->
+  <section id="view-notebook" class="view" aria-label="Notebook">
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">📓 Notebook</h1>
+        <div class="section-sub">Your ideas and notes</div>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="note-search" type="search" placeholder="Search notes…" aria-label="Search notes">
+    </div>
+    <div class="notes-grid" id="notes-grid" role="list" aria-live="polite"></div>
+    <button class="fab" id="note-fab" title="New Note" aria-label="Create new note">+</button>
+  </section>
+
+  <!-- ─── CALENDAR ───────────────────────── -->
+  <section id="view-calendar" class="view" aria-label="Calendar">
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">📅 Calendar</h1>
+        <div class="section-sub">Plan your schedule</div>
+      </div>
+    </div>
+
+    <!-- Cal Header -->
+    <div class="cal-header">
+      <div class="cal-month" id="cal-month-label">June 2026</div>
+      <div class="cal-nav">
+        <button class="btn-icon" id="cal-prev" title="Previous month" aria-label="Previous month">◀</button>
+        <button class="btn btn-ghost btn-sm" id="cal-today">Today</button>
+        <button class="btn-icon" id="cal-next" title="Next month" aria-label="Next month">▶</button>
+      </div>
+    </div>
+
+    <!-- Weekday labels -->
+    <div class="cal-weekdays" role="row">
+      <div class="cal-weekday">Su</div>
+      <div class="cal-weekday">Mo</div>
+      <div class="cal-weekday">Tu</div>
+      <div class="cal-weekday">We</div>
+      <div class="cal-weekday">Th</div>
+      <div class="cal-weekday">Fr</div>
+      <div class="cal-weekday">Sa</div>
+    </div>
+
+    <!-- Grid -->
+    <div class="cal-grid" id="cal-grid" role="grid" aria-label="Calendar grid"></div>
+
+    <!-- Legend -->
+    <div class="flex gap-12 mt-12 flex-wrap">
+      <span style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--accent)"></span> Personal
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--green)"></span> Business
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--blue)"></span> Trade
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--amber)"></span> Reminder
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--purple)"></span> Other
+      </span>
+    </div>
+
+    <!-- Events Panel -->
+    <div class="cal-events-panel mt-16" id="cal-events-panel">
+      <div class="cal-events-panel-header">
+        <span>📅 Select a day</span>
+        <button class="btn btn-primary btn-sm" id="add-cal-event-btn">+ Add</button>
+      </div>
+      <div class="cal-events-list"></div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════
+     BOTTOM NAVIGATION
+══════════════════════════════════════════ -->
+<nav id="bottom-nav" role="navigation" aria-label="Section Navigation">
+  <button class="nav-tab active" data-view="dashboard" aria-label="Dashboard">
+    <span class="tab-icon">🏠</span>
+    <span class="tab-label">Dashboard</span>
+  </button>
+  <button class="nav-tab" data-view="trades" aria-label="Trades">
+    <span class="tab-icon">📦</span>
+    <span class="tab-label">Trades</span>
+  </button>
+  <button class="nav-tab" data-view="reminders" aria-label="Reminders">
+    <span class="tab-icon">⏰</span>
+    <span class="tab-label">Reminders</span>
+  </button>
+  <button class="nav-tab" data-view="notebook" aria-label="Notebook">
+    <span class="tab-icon">📓</span>
+    <span class="tab-label">Notes</span>
+  </button>
+  <button class="nav-tab" data-view="calendar" aria-label="Calendar">
+    <span class="tab-icon">📅</span>
+    <span class="tab-label">Calendar</span>
+  </button>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════ -->
+
+<!-- Trade Modal -->
+<div class="modal-overlay" id="trade-modal" role="dialog" aria-modal="true" aria-labelledby="trade-modal-title">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="trade-modal-title">New Trade Entry</div>
+    <form id="trade-form" novalidate>
+      <!-- Populated by Trade.buildFormHTML() -->
+    </form>
+    <button class="btn btn-ghost w-full mt-12" data-close-modal="trade">Cancel</button>
+  </div>
+</div>
+
+<!-- Reminder Modal -->
+<div class="modal-overlay" id="reminder-modal" role="dialog" aria-modal="true" aria-labelledby="rem-modal-title">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="rem-modal-title">Set Reminder</div>
+    <form id="reminder-form" novalidate>
+      <!-- Populated by Reminders.buildFormHTML() -->
+    </form>
+    <button class="btn btn-ghost w-full mt-12" data-close-modal="reminder">Cancel</button>
+  </div>
+</div>
+
+<!-- Note Modal -->
+<div class="modal-overlay" id="note-modal" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="note-modal-title">New Note</div>
+    <div id="note-form-content">
+      <!-- Populated by Notebook.buildNoteEditorHTML() -->
+    </div>
+    <button class="btn btn-ghost w-full mt-12" data-close-modal="note">Cancel</button>
+  </div>
+</div>
+
+<!-- Calendar Event Modal -->
+<div class="modal-overlay" id="cal-modal" role="dialog" aria-modal="true" aria-labelledby="cal-modal-title">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="cal-modal-title">New Event</div>
+    <form id="cal-form" novalidate>
+      <!-- Populated by Cal.buildEventFormHTML() -->
+    </form>
+    <button class="btn btn-ghost w-full mt-12" data-close-modal="cal">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ALARM OVERLAY
+══════════════════════════════════════════ -->
+<div id="alarm-overlay" role="alertdialog" aria-modal="true" aria-label="Alarm ringing">
+  <div class="alarm-pulse" aria-hidden="true">🔔</div>
+  <div class="alarm-title" id="alarm-msg-title">Reminder!</div>
+  <div class="alarm-subtitle" id="alarm-msg-sub"></div>
+  <div class="flex gap-12 mt-8">
+    <button class="btn btn-ghost" id="snooze-alarm">⏱ Snooze 5 min</button>
+    <button class="btn btn-primary" id="alarm-dismiss">✓ Dismiss</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TOAST CONTAINER
+══════════════════════════════════════════ -->
+<div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<!-- ══════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════ -->
+<script src="./js/db.js"></script>
+<script src="./js/trade.js"></script>
+<script src="./js/reminders.js"></script>
+<script src="./js/notebook.js"></script>
+<script src="./js/calendar.js"></script>
+<script src="./js/app.js"></script>
+
+<script>
+// ── Inject form HTML into modals after DOM ready ──────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Trade form
+  document.getElementById('trade-form').innerHTML = Trade.buildFormHTML();
+  // Reminder form
+  document.getElementById('reminder-form').innerHTML = Reminders.buildFormHTML();
+  // Note editor
+  document.getElementById('note-form-content').innerHTML = Notebook.buildNoteEditorHTML();
+  // Calendar event form
+  document.getElementById('cal-form').innerHTML = Cal.buildEventFormHTML();
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  // Notification request on notif btn
+  document.getElementById('notif-btn')?.addEventListener('click', () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(p => {
+        App.toast(p === 'granted' ? 'Notifications enabled 🔔' : 'Notifications blocked', p === 'granted' ? 'success' : 'error');
+      });
+    }
+  });
+
+  // Settings
+  document.getElementById('settings-btn')?.addEventListener('click', () => {
+    App.toast('Settings coming soon…', 'info');
+  });
+});
+</script>
+
+</body>
+</html>
