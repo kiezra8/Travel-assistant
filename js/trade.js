@@ -61,6 +61,15 @@ const Trade = (() => {
     const statusBadge = t.status === 'Delivered' ? 'badge-done' :
                         t.status === 'Cancelled' ? 'badge-high' : 'badge-pending';
     const dirIcon = t.type === 'import' ? '📥' : '📤';
+    
+    let ownersHtml = `<div class="mt-8 text-sm"><span class="badge badge-low">Solely Owned</span></div>`;
+    if (t.owners && t.owners.length > 0) {
+      ownersHtml = `<div class="mt-8 text-sm" style="background:var(--bg-surface); padding:10px; border-radius:var(--radius-sm)">
+         <div class="text-muted mb-4" style="font-size:0.75rem; text-transform:uppercase; font-weight:600">Receivers / Owners:</div>
+         ${t.owners.map(o => `<div class="flex justify-between mt-4"><span>👤 ${_esc(o.name)}</span><span class="font-bold">${_num(o.quantity)} ${_esc(t.unit || 'units')}</span></div>`).join('')}
+       </div>`;
+    }
+
     return `
     <div class="trade-card ${t.type}" data-id="${t.id}">
       <div class="trade-card-top">
@@ -80,6 +89,7 @@ const Trade = (() => {
         <span>📅 ${_fmtDate(t.date)}</span>
         <span class="badge ${statusBadge}">${t.status}</span>
       </div>
+      ${ownersHtml}
       ${t.notes ? `<div class="mt-8 text-sm text-muted">${_esc(t.notes)}</div>` : ''}
       <div class="trade-card-actions">
         <button class="btn btn-ghost btn-sm" data-edit="${t.id}">✏️ Edit</button>
@@ -124,10 +134,46 @@ const Trade = (() => {
         if (el) el.addEventListener('input', _calcTotal);
       });
     }
+    
+    // Add owner row
+    const btnAddOwner = document.getElementById('trade-add-owner');
+    if (btnAddOwner) btnAddOwner.addEventListener('click', () => _addOwnerRow());
+  }
+
+  function _addOwnerRow(name = '', qty = '') {
+    const container = document.getElementById('trade-owners-container');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'owner-row flex gap-8 items-center mt-8';
+    div.innerHTML = `
+      <input type="text" class="form-input owner-name" placeholder="Name" value="${_esc(name)}" required style="flex:1">
+      <input type="number" class="form-input owner-qty" placeholder="Qty" value="${qty}" min="0" step="any" required style="flex:1">
+      <button type="button" class="btn-icon owner-remove" title="Remove" style="flex-shrink:0">✕</button>
+    `;
+    div.querySelector('.owner-remove').addEventListener('click', () => {
+      div.remove();
+      _calcTotal();
+    });
+    div.querySelector('.owner-qty').addEventListener('input', _calcTotal);
+    container.appendChild(div);
+    _calcTotal();
   }
 
   function _calcTotal() {
-    const qty   = parseFloat(document.getElementById('trade-qty')?.value) || 0;
+    const ownerRows = document.querySelectorAll('.owner-qty');
+    let qty = 0;
+    if (ownerRows.length > 0) {
+      ownerRows.forEach(input => qty += (parseFloat(input.value) || 0));
+      const qtyInput = document.getElementById('trade-qty');
+      if (qtyInput) {
+        qtyInput.value = qty;
+        qtyInput.readOnly = true;
+      }
+    } else {
+      const qtyInput = document.getElementById('trade-qty');
+      if (qtyInput) qtyInput.readOnly = false;
+      qty = parseFloat(document.getElementById('trade-qty')?.value) || 0;
+    }
     const price = parseFloat(document.getElementById('trade-unit-price')?.value) || 0;
     const el    = document.getElementById('trade-total-display');
     if (el) el.textContent = _num(qty * price);
@@ -137,6 +183,7 @@ const Trade = (() => {
   function _openNew() {
     document.getElementById('trade-modal-title').textContent = 'New Trade Entry';
     if ($form) $form.reset();
+    document.getElementById('trade-owners-container').innerHTML = '';
     document.getElementById('trade-id').value = '';
     document.getElementById('trade-date').value = new Date().toISOString().slice(0,10);
     _calcTotal();
@@ -158,12 +205,27 @@ const Trade = (() => {
     document.getElementById('trade-date').value      = t.date;
     document.getElementById('trade-status').value    = t.status;
     document.getElementById('trade-notes').value     = t.notes || '';
+    
+    document.getElementById('trade-owners-container').innerHTML = '';
+    if (t.owners && t.owners.length > 0) {
+      t.owners.forEach(o => _addOwnerRow(o.name, o.quantity));
+    }
+    
     _calcTotal();
     _openModal();
   }
 
   async function _handleSubmit(e) {
     e.preventDefault();
+    
+    const ownerRows = document.querySelectorAll('#trade-owners-container .owner-row');
+    const owners = [];
+    ownerRows.forEach(row => {
+      const n = row.querySelector('.owner-name').value.trim();
+      const q = parseFloat(row.querySelector('.owner-qty').value) || 0;
+      if (n && q > 0) owners.push({ name: n, quantity: q });
+    });
+
     const id       = document.getElementById('trade-id').value;
     const qty      = parseFloat(document.getElementById('trade-qty').value) || 0;
     const unitPrice= parseFloat(document.getElementById('trade-unit-price').value) || 0;
@@ -179,6 +241,7 @@ const Trade = (() => {
       date:      document.getElementById('trade-date').value,
       status:    document.getElementById('trade-status').value,
       notes:     document.getElementById('trade-notes').value.trim(),
+      owners:    owners,
       updatedAt: Date.now(),
     };
     if (!data.name || !data.country) { App.toast('Please fill required fields', 'error'); return; }
@@ -294,6 +357,16 @@ const Trade = (() => {
         <select id="trade-status" class="form-select">${statOpts}</select>
       </div>
     </div>
+    
+    <div class="form-group mb-16 p-12" style="background:var(--bg-surface); border: 1px solid var(--border); border-radius:var(--radius-md); padding: 12px;">
+      <div class="flex justify-between items-center mb-8">
+        <label class="form-label mb-0" style="margin-bottom:0">Receivers / Owners (Optional)</label>
+        <button type="button" class="btn btn-ghost btn-sm" id="trade-add-owner">+ Add Person</button>
+      </div>
+      <div class="text-muted text-sm mb-8" style="font-size:0.75rem">Adding owners automatically calculates Total Quantity.</div>
+      <div id="trade-owners-container" class="flex-col gap-8"></div>
+    </div>
+
     <div class="form-group">
       <label class="form-label">Notes</label>
       <textarea id="trade-notes" class="form-textarea" placeholder="Additional details…"></textarea>
