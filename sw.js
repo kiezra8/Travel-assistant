@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tradeflow-v1';
+const CACHE_NAME = 'tradeflow-v2';
 const ASSETS = [
   './',
   './index.html',
